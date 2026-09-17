@@ -53,7 +53,7 @@ export async function listenReddit(): Promise<number> {
       } catch (err) {
         log.warn({ url, err: String(err) }, "feed failed");
       }
-      await sleep(FEED_GAP_MS);
+      if (url !== urls[urls.length - 1] || sub !== e.REDDIT_SUBREDDITS[e.REDDIT_SUBREDDITS.length - 1]) await sleep(FEED_GAP_MS);
     }
   }
   return total;

@@ -27,12 +27,16 @@ function load(): Record<string, string> {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("expected a JSON object");
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof v !== "string") throw new Error(`value for "${k}" is not a string`);
+      if (typeof v !== "string") throw new Error("one of the values is not a string");
       if (!k.startsWith("//")) out[k] = v;
     }
     return out;
   } catch (err) {
-    log.warn({ err: String(err) }, "posture.local.json unreadable — posture is empty; triage will be more conservative");
+    // Deliberately not echoing the error. Node's JSON.parse message quotes a snippet of the input,
+    // so a half-written file would put the curated notes — the very thing this file keeps out of
+    // git — straight into the journal. Same care as bannedPhrases.ts takes with its sibling file.
+    const why = err instanceof SyntaxError ? "not valid JSON" : (err as Error).message;
+    log.warn({ why }, "posture.local.json unusable — posture is empty; triage will be more conservative");
     return {};
   }
 }

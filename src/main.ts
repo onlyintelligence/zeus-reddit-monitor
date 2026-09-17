@@ -46,8 +46,8 @@ if (once) {
 }
 
 new Cron("*/30 * * * *", () => void run("listen"));   // every 30 min
-new Cron("5,35 * * * *", () => void run("triage"));   // 5 min after listen (Agent SDK, subscription credit)
+new Cron("10,40 * * * *", () => void run("triage"));  // after the listen pass finishes (Agent SDK, subscription credit)
 new Cron("*/10 * * * *", () => void run("publish"));  // run each draft through the gate; in manual mode this parks it for you
-new Cron(`10 */${env().DIGEST_EVERY_HOURS} * * *`, () => void run("digest")); // one email every N hours
+new Cron(`20 */${env().DIGEST_EVERY_HOURS} * * *`, () => void run("digest")); // one email every N hours
 new Cron("15 3 * * *",   () => void run("purge"));    // nightly 48h purge
 log.info({ postMode: env().REDDIT_POST_MODE }, "scheduler up");

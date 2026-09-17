@@ -1,6 +1,7 @@
 [
   {
     "id": "example-rule",
+    "_note": "The id is NOT redacted: it is written to publish_jobs.last_error and audit_log.meta when a draft is blocked, and audit_log is backed up nightly. Name rules after what they protect against, never after the string they hide. The matched text itself is dropped for local rules (see redactHits in bannedPhrases.ts).",
     "re": "\\bexamplecorp\\b",
     "flags": "i",
     "why": "Documentation only, for whoever reads this file later. Never logged, never posted.",

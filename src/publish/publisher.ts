@@ -9,7 +9,7 @@
  * In the default manual mode step 4 never contacts Reddit at all: the job is parked as
  * `manual_pending`, the digest email hands you the URL and the text, and you post it yourself.
  */
-import { and, eq, lte } from "drizzle-orm";
+import { and, eq, lte, inArray } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { audit, tryIncrement, withLock } from "../db/helpers.js";
 import { env } from "../env.js";
@@ -91,9 +91,15 @@ const defer = (id: string, ms: number, err?: string) => db().update(schema.publi
 export async function markManualPosted(jobId: string, actor: string, url?: string): Promise<boolean> {
   const [job] = await db().update(schema.publishJobs)
     .set({ status: "posted", postedAt: new Date(), externalResultUrl: url ?? null })
-    .where(eq(schema.publishJobs.id, jobId))
+    .where(and(
+      eq(schema.publishJobs.id, jobId),
+      // manual_pending is the normal case; failed covers an api-mode post that errored and that
+      // you then sent by hand. Anything else — unknown id, or already posted — returns false
+      // rather than silently re-marking.
+      inArray(schema.publishJobs.status, ["manual_pending", "failed"]),
+    ))
     .returning({ draftId: schema.publishJobs.draftId });
-  if (!job) { log.error({ job: jobId }, "no such publish job"); return false; }
+  if (!job) { log.error({ job: jobId }, "no publish job in a markable state (unknown, or already posted)"); return false; }
   const [draft] = await db().select({ itemId: schema.drafts.itemId }).from(schema.drafts).where(eq(schema.drafts.id, job.draftId));
   if (draft?.itemId) await db().update(schema.items).set({ status: "posted" }).where(eq(schema.items.id, draft.itemId));
   await audit(actor, "publish.manual_posted", jobId, { url });

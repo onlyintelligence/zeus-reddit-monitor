@@ -13,5 +13,7 @@ export function db() {
   }
   return _db;
 }
+/** The underlying postgres.js client (for `reserve()`); initialises the pool if needed. */
+export function rawSql() { db(); return _sql!; }
 export async function closeDb() { await _sql?.end(); }
 export { schema };

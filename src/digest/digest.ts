@@ -50,7 +50,7 @@ function render(rows: Row[]) {
 <div style="border:1px solid #ddd;border-radius:8px;padding:14px;margin:0 0 18px">
   <div style="font-size:12px;color:#666">#${n + 1} · <b>r/${esc(r.i.container)}</b> · ${age}h ago · relevance <b>${t.relevance}</b> · ${t.intent} · risk ${t.promotionRisk} · ${t.zeusIsTheAnswer ? "✅ mention Zeus" : "🚫 no Zeus"}</div>
   <div style="margin:6px 0"><a href="${r.i.url}">${esc(r.i.title ?? r.i.url)}</a></div>
-  <div style="font-size:13px;color:#333;white-space:pre-wrap;border-left:3px solid #ccc;padding-left:8px;margin:8px 0">${esc((r.i.body ?? "").slice(0, 600))}</div>
+  <div style="font-size:13px;color:#333;white-space:pre-wrap;border-left:3px solid #ccc;padding-left:8px;margin:8px 0">${quoteOrPurged(r.i.body)}</div>
   <div style="font-size:12px;color:#666"><i>${esc(t.reason)}</i></div>
   <div style="margin-top:10px;font-size:12px;color:#666">Paste this:</div>
   <pre style="background:#f6f6f6;padding:10px;border-radius:6px;white-space:pre-wrap;font-family:inherit">${esc(reply)}</pre>
@@ -65,3 +65,13 @@ ${blocksHtml}</div>`;
   return { html, text };
 }
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+
+/**
+ * A draft can outlive the text it was written against: purgeOldBodies nulls the stored body after
+ * PURGE_AFTER_HOURS, and a backlog or a failed send can leave a draft un-emailed past that point.
+ * Say so, rather than rendering an empty quote block that reads as a bug.
+ */
+const quoteOrPurged = (body: string | null) =>
+  body && body.trim()
+    ? esc(body.slice(0, 600))
+    : `<i style="color:#999">(post text purged after 48 hours — open the link above to read it)</i>`;

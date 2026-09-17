@@ -35,7 +35,12 @@ interface LocalRule { id?: string; re?: string; flags?: string; why?: string; mu
  */
 function loadLocalRules(): Array<{ re: RegExp; why: string; source: "local" }> {
   const path = process.env.COMPLIANCE_RULES_FILE;
-  if (!path) return [];
+  if (!path) {
+    // Say so out loud. An unconfigured linter looks identical to a working one, and the whole
+    // mechanism is pointless if nobody notices the extra rules are not loaded.
+    console.warn(`compliance rules: COMPLIANCE_RULES_FILE is not set — only the ${RULES.length} built-in rules apply`);
+    return [];
+  }
   const die = (msg: string): never => {
     console.error(`compliance rules (${path}): ${msg}`);
     return process.exit(1);
