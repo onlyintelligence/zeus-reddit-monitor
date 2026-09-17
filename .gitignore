@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+*.log
+
+# Local, never committed: curated community notes and deployment-specific linter rules.
+posture.local.json
+compliance-rules.local.json

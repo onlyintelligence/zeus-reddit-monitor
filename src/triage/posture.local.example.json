@@ -1,0 +1,13 @@
+{
+  "//": "Copy to posture.local.json, which is gitignored and never committed.",
+  "//1": "One entry per subreddit, keyed by name without the r/ prefix. The value is a short note on",
+  "//2": "what THAT subreddit's own rules allow: whether self-promotion is permitted at all, whether a",
+  "//3": "disclosed mention in reply to a direct question is acceptable, anything in the sidebar that a",
+  "//4": "reply should respect.",
+  "//5": "The note is passed to the triage and drafting prompts, so write it as guidance you would be",
+  "//6": "content for a moderator of that subreddit to read.",
+  "//7": "A subreddit with no entry gets the conservative default in posture.ts: assume promotion is",
+  "//8": "unwelcome, answer helpfully, mention nothing unless directly asked. Keys starting with // are",
+  "//9": "ignored by the loader.",
+  "examplesubreddit": "Self-promotion of any kind is against the sidebar rules. Answer the question and stop; no product mention even if asked."
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "example-rule",
+    "re": "\\bexamplecorp\\b",
+    "flags": "i",
+    "why": "Documentation only, for whoever reads this file later. Never logged, never posted.",
+    "mustMatch": ["ExampleCorp ships on Friday", "examplecorp"],
+    "mustNotMatch": ["example corporation"]
+  }
+]

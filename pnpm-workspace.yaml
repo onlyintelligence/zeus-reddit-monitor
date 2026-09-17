@@ -1,0 +1,6 @@
+# This is a single-package repository. The file exists only because pnpm 10+ reads its settings
+# from here rather than from the "pnpm" field in package.json; there is no `packages:` key and no
+# workspace. Without it, `pnpm install` exits non-zero on esbuild's build script (tsx and
+# drizzle-kit both bundle esbuild) and the clone-and-run path in the README would not work.
+allowBuilds:
+  esbuild: true

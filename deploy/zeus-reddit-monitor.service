@@ -1,0 +1,53 @@
+# /etc/systemd/system/zeus-reddit-monitor.service
+#
+# Runs the scheduler as an unprivileged system user. tsx is run DIRECTLY rather than through pnpm,
+# which spawns a process tree whose orphans can survive a kill.
+#
+# The service account's home is /opt/zeus-reddit-monitor, and that tree is the only writable path:
+# it holds the code, the env file, and the Claude CLI's cache (the Agent SDK extracts a binary at
+# runtime and writes ~/.claude, so HOME and CLAUDE_CODE_TMPDIR must both be inside ReadWritePaths).
+#
+# EnvironmentFile is not shell parsing. Keep every value double-quoted on one line, with no inline
+# comments and no \ $ or ` inside a value, so this file and `set -a; . file` load identically.
+
+[Unit]
+Description=Reddit listener, relevance filter and email digest (zeus-reddit-monitor)
+Documentation=file:///opt/zeus-reddit-monitor/app/README.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=zeus-reddit-monitor
+Group=zeus-reddit-monitor
+WorkingDirectory=/opt/zeus-reddit-monitor/app
+EnvironmentFile=/opt/zeus-reddit-monitor/.env
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=CLAUDE_CODE_TMPDIR=/opt/zeus-reddit-monitor/tmp
+Environment=DISABLE_AUTOUPDATER=1
+ExecStart=/opt/zeus-reddit-monitor/app/node_modules/.bin/tsx src/main.ts
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+# tsx exits with code 143 (rather than by signal) on SIGTERM; without this a plain `systemctl stop`
+# leaves the unit in `failed`.
+SuccessExitStatus=143
+UMask=0077
+
+# Hardening. /opt/zeus-reddit-monitor is the only writable tree.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/zeus-reddit-monitor
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target
