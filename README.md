@@ -26,11 +26,13 @@ https://www.reddit.com/r/<subreddit>/search.rss?q=<keyword>&restrict_sr=1&sort=n
 
 * No authentication, no OAuth, no API key, no login. Nothing behind a permission I have not been granted.
 * A real User-Agent naming the account and a contact address, set in `REDDIT_USER_AGENT`.
-* One request at a time, with a fixed 10-second gap between feeds (`src/listeners/reddit.ts`).
-* `Retry-After` honoured, with backoff on any 429 or 5xx (`src/http.ts`).
-* Volume: one pass every 30 minutes over the configured subreddits. With the default settings that
-  is roughly 12 requests an hour — about 0.2 per minute, against a limit of 100 per minute. The
-  optional keyword feeds raise it to roughly 1.2 per minute, still far below.
+* One request at a time, with a full minute between feeds (`src/listeners/reddit.ts`).
+* Exactly one attempt per feed per pass. A feed that answers 429 is skipped until the next pass
+  rather than retried — being told to slow down is answered by stopping, not by trying again.
+* Volume: one pass every 30 minutes over the configured subreddits, one request each. With the six
+  subreddits currently configured that is 12 requests an hour — about 0.2 per minute, against a
+  limit of 100 per minute. Turning on the optional keyword feeds makes a pass 36 requests spread
+  over 36 minutes, roughly 1 per minute, still far below.
 * Feeds carry title, author, link, timestamp and body text. No scores, no private data, no user
   history, no crawling beyond the feeds listed above.
 

@@ -11,8 +11,9 @@
  * They carry title, author, link, timestamp and body text. No scores, nothing private.
  *
  * Politeness is the design, not a workaround: a real User-Agent naming the operator and how to
- * reach them, one request at a time with a fixed gap between feeds, and Retry-After honoured on
- * any 429 (http() does that for every caller).
+ * reach them, one request at a time with a minute between feeds, and exactly one attempt per feed
+ * per pass. A feed that answers 429 is skipped until the next pass rather than retried — backing
+ * off entirely is the right response to being told to slow down.
  */
 import { env } from "../env.js";
 import { child } from "../log.js";
@@ -21,10 +22,10 @@ import { fetchFeed } from "./rss.js";
 import { storeItems } from "./store.js";
 
 const log = child("listeners:reddit");
-/** Ten seconds between feeds, so a listen pass is a trickle rather than a burst. new.rss alone
+/** One minute between feeds, so a listen pass is a trickle rather than a burst. new.rss alone
  *  covers normal use, so the extra per-keyword search feeds are opt-in via REDDIT_SEARCH_FEEDS
  *  rather than on by default: fewer requests for the same answer. */
-const FEED_GAP_MS = 10_000;
+const FEED_GAP_MS = 60_000;
 const INTENT_QUERIES = ["middleman", "mm", "is this legit", "scammed", "vouch"];
 
 export async function listenReddit(): Promise<number> {
@@ -37,7 +38,7 @@ export async function listenReddit(): Promise<number> {
     ];
     for (const url of urls) {
       try {
-        const entries = await fetchFeed(url, e.REDDIT_USER_AGENT);
+        const entries = await fetchFeed(url, e.REDDIT_USER_AGENT, { retries: 0 });
         const items: ListenedItem[] = entries.map((en) => ({
           platform: "reddit",
           externalId: redditFullname(en.id, en.link),

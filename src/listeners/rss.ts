@@ -10,8 +10,8 @@ export interface FeedEntry {
   id: string; link: string; title?: string; author?: string; content: string; isoDate?: string;
 }
 
-export async function fetchFeed(url: string, userAgent: string): Promise<FeedEntry[]> {
-  const res = await http(url, { userAgent, headers: { accept: "application/atom+xml, application/rss+xml, application/xml;q=0.9" } });
+export async function fetchFeed(url: string, userAgent: string, opts: { retries?: number } = {}): Promise<FeedEntry[]> {
+  const res = await http(url, { userAgent, retries: opts.retries, headers: { accept: "application/atom+xml, application/rss+xml, application/xml;q=0.9" } });
   const xml = await res.text();
   const feed = await parser.parseString(xml);
   return feed.items.map((it) => ({
