@@ -14,7 +14,7 @@ import { db, schema } from "../db/client.js";
 import { audit, tryIncrement, withLock } from "../db/helpers.js";
 import { env } from "../env.js";
 import { child } from "../log.js";
-import { lintBannedPhrases } from "../compliance/bannedPhrases.js";
+import { lintBannedPhrases, redactHits } from "../compliance/bannedPhrases.js";
 import { ensureDisclosure, mentionsZeus } from "../compliance/disclosure.js";
 import { redditComment } from "./reddit.js";
 const log = child("publisher");
@@ -43,7 +43,9 @@ export async function drainPublishQueue(): Promise<number> {
 
       // 1. linter — hard fail
       const hits = lintBannedPhrases(draft.text);
-      if (hits.length) { await fail(job.id, `linter: ${hits.map((h) => h.why).join("; ")}`); await audit("system", "publish.blocked", job.id, { hits }); continue; }
+      // redactHits: a locally-configured rule exists precisely so its text is not written down, and
+      // audit_log outlives the 48h purge — recording the matched phrase would put it back on disk.
+      if (hits.length) { await fail(job.id, `linter: ${hits.map((h) => h.why).join("; ")}`); await audit("system", "publish.blocked", job.id, { hits: redactHits(hits) }); continue; }
 
       // 2. compliance injection
       const text = ensureDisclosure(draft.text, mentionsZeus(draft.text));

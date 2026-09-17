@@ -8,7 +8,12 @@
  */
 import { readFileSync } from "node:fs";
 
-export interface LintHit { phrase: string; index: number; why: string }
+/**
+ * `source` exists so callers can tell a built-in claim word (`guarantee`, `trustless` — public, safe
+ * to record) from a locally-configured one, whose whole point is that it does not appear in git.
+ * Anything that persists or transmits a hit must not include `phrase` when source is "local".
+ */
+export interface LintHit { phrase: string; index: number; why: string; source: "builtin" | "local" }
 
 const RULES: Array<{ re: RegExp; why: string }> = [
   { re: /\b(zeus\s+(is|as|provides?|offers?)\s+(an?\s+)?escrow|our\s+escrow|escrow\s+(service|bot|platform))\b/i, why: "self-description as escrow" },
@@ -28,7 +33,7 @@ interface LocalRule { id?: string; re?: string; flags?: string; why?: string; mu
  * rules than the operator configured — silent under-blocking is the failure this exists to stop.
  * Nothing here logs a pattern or a matched string, only rule ids, so the rules stay out of the journal.
  */
-function loadLocalRules(): Array<{ re: RegExp; why: string }> {
+function loadLocalRules(): Array<{ re: RegExp; why: string; source: "local" }> {
   const path = process.env.COMPLIANCE_RULES_FILE;
   if (!path) return [];
   const die = (msg: string): never => {
@@ -51,7 +56,13 @@ function loadLocalRules(): Array<{ re: RegExp; why: string }> {
   }
   if (!Array.isArray(parsed)) return die("expected a JSON array of rules");
 
-  return parsed.map((rule: LocalRule, i): { re: RegExp; why: string } => {
+  const samples = (v: unknown, id: string, field: string): string[] => {
+    if (v === undefined) return [];
+    if (!Array.isArray(v) || v.some((s) => typeof s !== "string")) die(`rule ${id}: "${field}" must be an array of strings`);
+    return v as string[];
+  };
+
+  return parsed.map((rule: LocalRule, i): { re: RegExp; why: string; source: "local" } => {
     const id = typeof rule?.id === "string" && rule.id ? rule.id : `#${i}`;
     if (typeof rule?.re !== "string" || !rule.re) die(`rule ${id}: "re" must be a non-empty string`);
     const flags = rule.flags ?? "i";
@@ -64,23 +75,31 @@ function loadLocalRules(): Array<{ re: RegExp; why: string }> {
       // reason, drop the pattern, so a rule never reaches the journal even when it is malformed.
       return die(`rule ${id}: not a valid regular expression — ${(err as Error).message.split(": ").pop()}`);
     }
-    for (const sample of rule.mustMatch ?? []) {
+    for (const sample of samples(rule.mustMatch, id, "mustMatch")) {
       if (!re.test(sample)) die(`rule ${id}: a mustMatch sample did not match — the rule does not do what it claims`);
     }
-    for (const sample of rule.mustNotMatch ?? []) {
+    for (const sample of samples(rule.mustNotMatch, id, "mustNotMatch")) {
       if (re.test(sample)) die(`rule ${id}: a mustNotMatch sample matched — the rule is too broad`);
     }
-    return { re, why: `local rule (${id})` };
+    return { re, why: `local rule (${id})`, source: "local" };
   });
 }
 
-const ALL_RULES = [...RULES, ...loadLocalRules()];
+const ALL_RULES: Array<{ re: RegExp; why: string; source: "builtin" | "local" }> = [
+  ...RULES.map((r) => ({ ...r, source: "builtin" as const })),
+  ...loadLocalRules(),
+];
 
 export function lintBannedPhrases(text: string): LintHit[] {
   const hits: LintHit[] = [];
-  for (const { re, why } of ALL_RULES) {
+  for (const { re, why, source } of ALL_RULES) {
     const m = re.exec(text);
-    if (m) hits.push({ phrase: m[0], index: m.index, why });
+    if (m) hits.push({ phrase: m[0], index: m.index, why, source });
   }
   return hits;
+}
+
+/** Safe to persist or send: drops the matched text for locally-configured rules. */
+export function redactHits(hits: LintHit[]): Array<Partial<LintHit>> {
+  return hits.map((h) => (h.source === "local" ? { why: h.why, index: h.index, source: h.source } : h));
 }
