@@ -1,0 +1,17 @@
+# ~/.config/systemd/user/zeus-reddit-monitor.service
+# Run `loginctl enable-linger $USER` so it survives logout.
+[Unit]
+Description=Zeus Reddit monitor - listen and draft, no posting
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/zeus-reddit-monitor
+EnvironmentFile=%h/.zeus-reddit-monitor.env
+# EnvironmentFile parsing is not shell parsing: keep values unquoted and free of
+# ( and ; unless the whole value is quoted.
+ExecStart=%h/zeus-reddit-monitor/node_modules/.bin/tsx src/main.ts
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
